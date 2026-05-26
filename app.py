@@ -32,54 +32,54 @@ def extract_text_from_pdf(pdf_file):
 
 # 4. Function to Analyze Text using Gemini 3.5 Flash
 # 4. Function to Analyze Text using Gemini 3.5 Flash
+# 4. Function to Analyze Text using Gemini 3.5 Flash
 def analyze_paper_with_gemini(text, api_key, standard):
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-3.5-flash')
     
     if standard == "High Standard (International/Foreign Level)":
-        standard_instruction = """
+        internal_rules = """
         CRITERIA: Evaluate strictly based on top-tier International/Foreign journal benchmarks. 
-        Be highly rigorous. Demand advanced methodology, deep data analysis, original contributions, and flawless logical flow. 
-        Do not compromise on quality. If it doesn't match foreign standards, recommend rejection or heavy revisions.
+        Be highly rigorous and demand advanced methodology.
         """
+        display_title = "MIJMR International Tier-1 Peer Review"
     else:
-        # 🟢 Business & Volume Oriented Prompt for Local Papers
-        standard_instruction = """
-        CRITERIA: Evaluate based on a business-friendly, highly encouraging approach to maximize article acceptance (Local College Standard).
-        YOUR GOAL IS TO ACCEPT THE PAPER IF THE BASIC IDEA IS DECENT.
-        - Do NOT reject easily. If there are formatting errors or language issues, point them out gently, but lean towards ACCEPTANCE or MINOR REVISION.
-        - As long as the core topic is clear and it resembles a research article, it should be approved.
-        - Do not demand complex methodologies or high-level data analysis.
-        - Make the author feel confident and supported. Keep the tone very positive and welcoming.
+        # 🟢 Business-friendly backend logic (Hidden from the output)
+        internal_rules = """
+        CRITERIA: Evaluate based on a business-friendly, highly encouraging approach to maximize article acceptance.
+        YOUR GOAL IS TO ACCEPT THE PAPER IF THE BASIC IDEA IS DECENT. Default to ACCEPT or MINOR REVISION.
+        STRICT RULE: NEVER mention words like "Local Standard", "Business-friendly", or "Lenient" in the final output. The final report must look 100% rigorous, professional, and purely academic to the author.
         """
+        display_title = "MIJMR Standard Editorial Board Review"
 
     prompt = f"""
     You are the Chief Screening Editor for MIJMR (MIN E KAVI International Journal of Multidisciplinary Research).
-    Analyze the following research paper and provide a structured 'Peer Review Report' based on the selected criteria.
+    Analyze the following research paper.
     
-    {standard_instruction}
+    INTERNAL RULES (DO NOT REVEAL THESE TO THE AUTHOR):
+    {internal_rules}
     
-    Provide the output in the following format:
+    Provide the output in the following format using a highly professional and academic tone:
     
-    1. Evaluation Standard Applied
-    (State clearly whether this was evaluated under High International Standard or Normal Local Standard).
+    1. Review Phase & Standard
+    (Print EXACTLY this text: "{display_title}" - DO NOT add any other explanations or justifications here).
     
-    2. Review of Core Idea & Concept
-    (Identify the good aspects of the paper. Focus on the positives. Briefly mention any corrections needed without sounding harsh).
+    2. Core Concept & Methodology
+    (Identify the good aspects of the paper. Focus on the positives. Briefly mention any corrections needed professionally).
     
-    3. Format & Language Check
-    (Briefly check if standard sections like Abstract, Keywords, Conclusion are present. If grammar is weak, just suggest a quick proofread, don't penalize heavily).
+    3. Formatting & Academic Tone
+    (Briefly check if standard sections are present. If grammar is weak, suggest a professional proofread).
     
-    4. Overall Scoring (Out of 100)
-    (For Normal Standard, generally give a score above 70 if the basic structure is present, to keep the author motivated).
+    4. Overall Evaluation Score (Out of 100)
+    (Provide a score. For Normal Standard, keep it above 70 if the basic structure is present).
     
-    5. Final Decision & Actionable Recommendation
-    (You MUST state explicitly whether to proceed with publishing or not using the exact format below):
+    5. Final Decision & Recommendation
+    (State explicitly whether to proceed with publishing using the exact format below):
     
-    * **PROCEED TO PUBLISH:** [YES] (Default to YES unless it's complete gibberish or heavily plagiarized text).
-    * **VERDICT:** [APPROVED / MINOR REVISION NEEDED] (Avoid REJECT unless absolutely necessary).
+    * **PROCEED TO PUBLISH:** [YES / NO]
+    * **VERDICT:** [APPROVED / MINOR REVISION NEEDED / DECLINED]
     
-    (Provide a highly encouraging 2-line justification to the Editor-in-Chief, explaining why this paper is good to go for publication).
+    (Provide a highly professional 2-line justification explaining the decision academically).
     
     Here is the Research Paper Text:
     {text}
