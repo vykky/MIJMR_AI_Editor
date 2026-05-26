@@ -71,6 +71,7 @@ def analyze_paper_with_gemini(text, api_key):
         return f"API Error: {e}"
 
 # 5. Function to Create PDF from the Report
+# 5. Function to Create PDF from the Report
 def create_pdf(report_text):
     pdf = FPDF()
     pdf.add_page()
@@ -88,8 +89,8 @@ def create_pdf(report_text):
     pdf.set_font("helvetica", size=12)
     pdf.multi_cell(0, 8, clean_text)
     
-    # Return PDF as bytes
-    return pdf.output()
+    # 🟢 இங்குதான் மாற்றம் செய்யப்பட்டுள்ளது (bytearray-ஐ bytes ஆக மாற்றியுள்ளோம்)
+    return bytes(pdf.output())
 
 # 6. Streamlit User Interface
 uploaded_file = st.file_uploader("📄 Upload Research Paper (PDF format only)", type=["pdf"])
