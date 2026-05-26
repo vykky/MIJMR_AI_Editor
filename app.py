@@ -2,9 +2,10 @@ import streamlit as st
 import pdfplumber
 import google.generativeai as genai
 import time
-from fpdf import FPDF
+from docx import Document
+import io
 
-# 1. Page Configuration (No 'AI' in title)
+# 1. Page Configuration
 st.set_page_config(page_title="MIJMR Editorial Board Desk", page_icon="🔖", layout="wide")
 
 st.title("🔖 MIJMR - Editorial Board Evaluation Desk")
@@ -30,24 +31,20 @@ def extract_text_from_pdf(pdf_file):
     except Exception as e:
         return f"Error extracting text: {e}"
 
-# 4. Function to Analyze Text using Gemini 3.5 Flash
+# 4. Function to Analyze Text using Gemini 3.5 Flash (Multilingual)
 def analyze_paper_with_gemini(text, api_key, standard):
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-3.5-flash')
     
     if standard == "High Standard (International/Foreign Level)":
-        internal_rules = """
-        CRITERIA: Evaluate strictly based on top-tier International benchmarks. Be highly rigorous.
-        """
-        display_title = "MIJMR Editorial Board - International Tier-1 Review Statement"
+        internal_rules = "CRITERIA: Evaluate strictly based on top-tier International benchmarks. Be highly rigorous."
     else:
         internal_rules = """
         CRITERIA: Evaluate based on local university standard (Arts & Science level). 
-        - If the paper is moderately okay (50% to 70% satisfactory), your default decision MUST be APPROVED / PROCEED TO PUBLISH: YES. Do not reject or give heavy revision for average papers.
-        - If the paper is extremely poor (below 50% logic/structure), you must provide a strict 'REQUIRED ACTIONABLE CORRECTIONS LIST' point by point, explaining exactly what the author needs to change.
-        STRICT RULE: NEVER use any robotic or AI buzzwords. Write exactly like a human Senior Professor or a traditional Editorial Board panel.
+        - If the paper is moderately okay (50% to 70% satisfactory), your default decision MUST be APPROVED / PROCEED TO PUBLISH: YES. 
+        - If extremely poor (below 50% logic), provide a strict 'REQUIRED ACTIONABLE CORRECTIONS LIST'.
+        STRICT RULE: NEVER use any robotic or AI buzzwords. Write exactly like a human Senior Professor.
         """
-        display_title = "MIJMR Editorial Board - Official Review Statement"
 
     prompt = f"""
     You are a Senior Professor and Chief Screening Editor for MIJMR. 
@@ -56,25 +53,30 @@ def analyze_paper_with_gemini(text, api_key, standard):
     INTERNAL EVALUATION RULES:
     {internal_rules}
     
-    Provide the output EXACTLY in the following format. Do NOT include any introductory lines like "Here is the report". Start directly with the title.
+    CRITICAL MULTILINGUAL RULE: 
+    First, detect the primary language of the submitted research paper. 
+    You MUST write the ENTIRE evaluation report (including ALL headings, observations, ratings, and final verdicts) in the EXACT SAME LANGUAGE as the uploaded paper. 
+    (e.g., If the paper is in Tamil, write the report entirely in highly professional academic Tamil. If English, use formal English).
     
-    **{display_title}**
+    Provide the output EXACTLY in the following format (Translate the headings to the detected language appropriately). Start directly with the title.
     
-    **1. Core Observations & Evaluation:**
-    (Write 1-2 natural paragraphs about the paper's concept and methodology. Keep the tone professional and human-like).
+    **(Translate this Title): MIJMR Editorial Board - Official Review Statement**
     
-    **2. Document & Technical Structure:**
-    (Briefly comment on the presence of abstract, keywords, and general grammar in 2-3 sentences).
+    **1. (Translate): Core Observations & Evaluation:**
+    (Write 1-2 natural paragraphs evaluating the paper's concept and methodology in the detected language).
     
-    **3. Quality Rating:** [Provide a score out of 100, e.g., 72/100]
+    **2. (Translate): Document & Technical Structure:**
+    (Briefly comment on abstract, keywords, and grammar in the detected language).
     
-    **4. Required Actionable Corrections (Only if paper is very poor or needs changes):**
-    (If the paper is poor, list down exactly what parts to change point by point. If the paper is 50-70% ok, just mention 1-2 minor suggestions naturally).
+    **3. (Translate): Quality Rating:** [Score out of 100]
     
-    **5. Board's Final Verdict:**
-    * **PROCEED TO PUBLISH:** [YES / NO]
-    * **BOARD DECISION:** [APPROVED / REVISE SPECIFIC SECTIONS / DECLINED]
-    * **Final Remarks:** (A formal 1-2 sentence human-written concluding remark).
+    **4. (Translate): Required Actionable Corrections:**
+    (List corrections ONLY if the paper is poor. Otherwise, skip or mention minor tweaks).
+    
+    **5. (Translate): Board's Final Verdict:**
+    * **PROCEED TO PUBLISH:** [YES / NO] (Translate YES/NO)
+    * **BOARD DECISION:** [APPROVED / REVISE SPECIFIC SECTIONS / DECLINED] (Translate properly)
+    * **Final Remarks:** (A formal 1-2 sentence human-written concluding remark in the detected language).
     
     Here is the Research Paper Text:
     {text}
@@ -85,25 +87,25 @@ def analyze_paper_with_gemini(text, api_key, standard):
     except Exception as e:
         return f"API Error: {e}"
 
-# 5. Function to Create PDF from the Report
-def create_pdf(report_text):
-    pdf = FPDF()
-    pdf.add_page()
+# 5. Function to Create Word Document (.docx) from the Report
+def create_docx(report_text):
+    doc = Document()
+    doc.add_heading('MIJMR Editorial Board Evaluation Report', 0)
     
-    # Add Title (No AI mention)
-    pdf.set_font("helvetica", "B", 14)
-    pdf.cell(0, 10, "MIJMR Editorial Board Evaluation Report", ln=True, align="C")
-    pdf.ln(5)
-    
-    # Clean the text
+    # Clean basic markdown tags
     clean_text = report_text.replace("**", "").replace("*", "")
-    clean_text = clean_text.encode('latin-1', 'replace').decode('latin-1')
     
-    # Add Body Text
-    pdf.set_font("helvetica", size=11)
-    pdf.multi_cell(0, 7, clean_text)
+    # Add content to the document
+    for line in clean_text.split('\n'):
+        if line.strip():
+            doc.add_paragraph(line.strip())
+            
+    # Save document to memory buffer
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
     
-    return bytes(pdf.output())
+    return buffer
 
 # 6. Streamlit User Interface
 st.sidebar.header("🎯 Evaluation Settings")
@@ -126,23 +128,23 @@ if uploaded_file is not None:
             elif len(paper_text.strip()) < 50:
                 st.warning("⚠️ Text extraction failed or insufficient data. Ensure the PDF is not a scanned image.")
             else:
-                st.info("✅ Document verified. Generating board statement...")
+                st.info("✅ Document verified. Generating board statement in the paper's language...")
                 time.sleep(2)
                 
                 # Step B: Editorial Analysis
                 report = analyze_paper_with_gemini(paper_text, api_key, evaluation_standard)
                 
-                # Show Report on Screen (Directly markdown output without custom AI subheaders)
+                # Show Report on Screen
                 st.markdown("---")
                 st.markdown(report)
                 st.markdown("---")
                 st.success("Evaluation Process Completed Successfully.")
                 
-                # Generate PDF and provide Download Button
-                pdf_bytes = create_pdf(report)
+                # Generate Word Doc and provide Download Button
+                docx_buffer = create_docx(report)
                 st.download_button(
-                    label="📥 Download Official Board Report (PDF)",
-                    data=pdf_bytes,
-                    file_name="MIJMR_Editorial_Report.pdf",
-                    mime="application/pdf"
+                    label="📥 Download Official Board Report (Word .docx)",
+                    data=docx_buffer,
+                    file_name="MIJMR_Editorial_Report.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
